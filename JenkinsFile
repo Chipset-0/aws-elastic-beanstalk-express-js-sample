@@ -1,19 +1,13 @@
 pipeline {
-    agent any
+    agent none
 
     environment {
         DOCKER_USER=credentials("DOCKER_HUB_USER")
         DOCKER_PASSWORD=credentials("DOCKER_HUB_PASS")
+        IMAGE_NAME = 'assessment2'
     }
 
     stages {
-        stage('Init') {
-            agent any
-            steps {
-                sh 'echo $DOCKER_PASSWORD | docker login -u $DOCKER_USER --password-stdin'
-            }
-        }
-
         stage("node build") {
             agent {
                 docker {
@@ -22,14 +16,21 @@ pipeline {
             }
             stages {
                 stage('Install Dependencies') {
-                    steps {
-                        sh 'npm install'
-                    }
+                    steps { sh 'npm install' }
                 }
 
                 stage('Unit tests') {
-                    steps  {
-                        sh 'npm test'
+                    steps  {sh 'npm test'}
+                }
+                stage('Dependency Scan') {
+                    steps {
+                        sh 'npm audit --json > npm-audit-reports.json || true'
+                        sh 'npm audit --audit-level=high'
+                    }
+                    post {
+                        always {
+                            archiveArtifacts artifacts: 'npm-audit-report.json', allowEmptyArchive: true
+                        }
                     }
                 }
             }
@@ -38,10 +39,23 @@ pipeline {
         stage('Containerise and publish') {
             agent any
             stages {
-                steps {
-                    sh 'docker build -t assessment2:latest .'
-                    sh 'docker push $DOCKER_USER/assessment2:latest'
+                stage('Build Image') {
+                    steps {
+                        sh 'docker build -t $DOCKER_USER/$IMAGE_NAME:latest .'
+                        
+                    }
                 }
+
+                stage('Push Image') {
+                    steps: {
+                        sh 'echo $DOCKER_PASSWORD | docker login -u $DOCKER_USER --password-stdin'
+                        sh 'docker push $DOCKER_USER/assessment2:latest'
+                    }
+                }
+            }
+
+            post {
+                always { sh 'docker logout || true'}
             }
         }
     }
