@@ -1,0 +1,53 @@
+pipeline {
+    agent any
+
+    environment {
+        DOCKER_USER=credentials("DOCKER_HUB_USER")
+        DOCKER_PASSWORD=credentials("DOCKER_HUB_PASS")
+    }
+
+    stages {
+        stage('Init') {
+            agent any
+            steps {
+                sh 'echo $DOCKER_PASSWORD | docker login -u $DOCKER_USER --password-stdin'
+            }
+        }
+
+        stage("node build") {
+            agent {
+                docker {
+                    image 'node:16'
+                }
+            }
+            stages {
+                stage('Install Dependencies') {
+                    steps {
+                        sh 'npm install'
+                    }
+                }
+
+                stage('Unit tests') {
+                    steps  {
+                        sh 'npm test'
+                    }
+                }
+            }
+        }
+
+        stage('Containerise and publish') {
+            agent any
+            stages {
+                steps {
+                    sh 'docker build -t assessment2:latest .'
+                    sh 'docker push $DOCKER_USER/assessment2:latest'
+                }
+            }
+        }
+    }
+
+    post {
+        success { echo 'Pipeline success'}
+        failure { echo 'Pipeline failed'}
+    }
+}
