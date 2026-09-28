@@ -7,6 +7,12 @@ pipeline {
         IMAGE_NAME = 'assessment2'
     }
 
+    options {
+        timeout(time: 20, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '10', artifactNumToKeepStr: '5'))
+        timestamps()
+    }
+
     stages {
         stage("node build") {
             agent {
@@ -17,14 +23,21 @@ pipeline {
             }
             stages {
                 stage('Install Dependencies') {
-                    steps { sh 'npm install' }
+                    steps { 
+                        echo 'Installing Dependencies'
+                        sh 'npm install' 
+                    }
                 }
 
                 stage('Unit tests') {
-                    steps  {sh 'npm test'}
+                    steps  {
+                        echo 'Running Unit Tests'
+                        sh 'npm test'
+                    }
                 }
                 stage('Dependency Scan') {
                     steps {
+                        echo 'Running Dependency Vulnerability Scan'
                         sh 'npm audit --json > npm-audit-reports.json || true'
                         sh 'npm audit --audit-level=high'
                     }
@@ -42,6 +55,7 @@ pipeline {
             stages {
                 stage('Build Image') {
                     steps {
+                        echo 'Building Image'
                         sh 'docker build -t $DOCKER_USER/$IMAGE_NAME:latest .'
                         
                     }
@@ -49,6 +63,7 @@ pipeline {
 
                 stage('Push Image') {
                     steps {
+                        echo 'Pushing Image to Dockerhub'
                         sh 'echo $DOCKER_PASSWORD | docker login -u $DOCKER_USER --password-stdin'
                         sh 'docker push $DOCKER_USER/assessment2:latest'
                     }
