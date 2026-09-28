@@ -12,6 +12,7 @@ pipeline {
             agent {
                 docker {
                     image 'node:16'
+                    args '-e npm_config_cache=/tmp/.npm'
                 }
             }
             stages {
@@ -29,7 +30,7 @@ pipeline {
                     }
                     post {
                         always {
-                            archiveArtifacts artifacts: 'npm-audit-report.json', allowEmptyArchive: true
+                            archiveArtifacts artifacts: 'npm-audit-reports.json', allowEmptyArchive: true
                         }
                     }
                 }
@@ -47,7 +48,7 @@ pipeline {
                 }
 
                 stage('Push Image') {
-                    steps: {
+                    steps {
                         sh 'echo $DOCKER_PASSWORD | docker login -u $DOCKER_USER --password-stdin'
                         sh 'docker push $DOCKER_USER/assessment2:latest'
                     }
