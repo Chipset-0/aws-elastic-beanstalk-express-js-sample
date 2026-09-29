@@ -1,6 +1,6 @@
 # Assignment Note
 
-This repository is for the completion of Assessment 2
+This repository is for the completion of Assessment 2.
 
 # AWS Elastic Beanstalk Node.js Sample App
 
